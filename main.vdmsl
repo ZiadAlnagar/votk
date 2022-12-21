@@ -1,0 +1,606 @@
+types
+	String = seq of char
+	;
+	TombStatus = <Open> | <Closed> | <Humidity>| <Maintenance>
+	;
+	AccessType = <General> | <Special>
+	;
+	TicketType = <General> | <General_with_Camera> | <Special>
+	;
+	WorkingStatus = <Available> | <Busy>
+	;
+	TombList = <KV1_G> | <KV2_G> | <KV6_G> | <KV8_G> | <KV11_G> | <KV14_G> | <KV15_G> | <KV47_G>|<KV9_S> | <KV17_S> | <KV62_S>
+	;
+	Tourist::
+		Name : String
+		PreferedLanguage : String
+		Paid:bool
+	;
+	TourGuide::
+		ID : nat
+		Available : WorkingStatus
+	;
+	VisitorGroup::
+		ID : nat
+		Tourists : seq of Tourist
+		TourGuides : seq of TourGuide
+		inv mk_VisitorGroup(-,T,TG)== len(T)>=1 and len(T)<=20 and len(TG)<=2 and len(TG)>= 0
+	;
+	TourGroup::
+		ID : nat
+		Ticket : TicketType |<nil>
+		Access : AccessType |<nil>
+		TourGuide : TourGuide | <nil>
+		Tourists : set of Tourist
+		GeneralVisitedTombs : set of Tomb
+		SpecialVisitedTombs : set of Tomb
+		inv mk_TourGroup(-,-,-,-,Tourists,-,-)==card(Tourists)<=10 and card(Tourists)>=1
+	;
+	Tomb::
+		Name : TombList
+		Type : AccessType
+		Status : TombStatus
+		MaximumCapacity : nat
+		CurrentCapacity : nat
+		MaximumHumidity : nat
+		CurrentHumidity : nat
+		Maintenance:bool
+		TotalTourGroup : set of TourGroup
+		TourGroupInTomb : set of TourGroup
+		Waitingtourgroup : seq of TourGroup
+		WaitingTourGuides: set of TourGuide
+		inv mk_Tomb(-,-,-,MC,CC,MH,CH,-,-,-,-,-)==CC<=MC and CH<MH
+	;
+values
+	--General Tombs--
+	tomb1_G =mk_Tomb(<KV1_G>,<General>,<Open>,30,0,100,0,false,{},{},[],{});
+	tomb2_G =mk_Tomb(<KV2_G>,<General>,<Open>,30,0,100,0,false,{},{},[],{});
+	tomb3_G =mk_Tomb(<KV6_G>,<General>,<Open>,30,0,100,0,false,{},{},[],{});
+	tomb4_G =mk_Tomb(<KV8_G>,<General>,<Open>,30,0,100,0,false,{},{},[],{});
+	tomb5_G =mk_Tomb(<KV11_G>,<General>,<Open>,30,0,100,0,false,{},{},[],{});
+	tomb6_G =mk_Tomb(<KV14_G>,<General>,<Closed>,30,0,100,0,false,{},{},[],{});
+	tomb7_G =mk_Tomb(<KV15_G>,<General>,<Closed>,30,0,100,0,false,{},{},[],{});
+	tomb8_G =mk_Tomb(<KV47_G>,<General>,<Closed>,30,0,100,0,false,{},{},[],{});
+	--Special Tombs--
+	tomb1_S =mk_Tomb(<KV9_S>,<Special>,<Open>,30,0,100,0,false,{},{},[],{});
+	tomb2_S =mk_Tomb(<KV17_S>,<Special>,<Open>,30,0,100,0,false,{},{},[],{});
+	tomb3_S =mk_Tomb(<KV62_S>,<Special>,<Closed>,30,0,100,0,false,{},{},[],{});
+	--Tourists--
+	tourist1=mk_Tourist(['T','e','s','t','1'],['A','r','a','b','i','c'],false);
+	tourist2=mk_Tourist(['T','e','s','t','2'],['A','r','a','b','i','c'],false);
+	tourist3=mk_Tourist(['T','e','s','t','3'],['A','r','a','b','i','c'],false);
+	tourist4=mk_Tourist(['T','e','s','t','4'],['A','r','a','b','i','c'],false);
+	tourist5=mk_Tourist(['T','e','s','t','5'],['A','r','a','b','i','c'],false);
+	--TourGuides--
+	tourGU1=mk_TourGuide(1,<Available>);
+	tourGU2=mk_TourGuide(2,<Busy>);
+	--TourGroups--
+	TourGroupTest1=mk_TourGroup(1,<nil>,<nil>,<nil>,{tourist1,tourist2},{},{});
+	TourGroupTest2=mk_TourGroup(2,<nil>,<nil>,<nil>,{tourist3,tourist4},{},{});
+	--VisitorGroups--
+	VG1=mk_VisitorGroup(1,[tourist1,tourist2,tourist3,tourist4,tourist5],[]);
+	--State Initialize--
+	waitingTourGroups=[TourGroupTest1,TourGroupTest2];
+	registerdTourGuides={tourGU1,tourGU2};
+	availableTourGuides={tourGU1};
+	unavailableTourGuides ={tourGU2};
+	visitorGroups={VG1};
+	tourGroups={TourGroupTest1,TourGroupTest2};
+	openGeneralTomb={tomb1_G,tomb2_G,tomb3_G,tomb4_G,tomb5_G};
+	closedGeneralTomb={tomb6_G,tomb7_G,tomb8_G};
+	openSpecialTomb={tomb1_S,tomb2_S};
+	closedSpecialTomb={tomb3_S};
+state VotK of
+	WaitingTourGroups : seq of TourGroup
+	RegisterdTourGuides : set of TourGuide
+	AvailableTourGuides : set of TourGuide
+	UnavailableTourGuides : set of TourGuide
+	VisitorGroups : set of VisitorGroup
+	TourGroups : set of TourGroup
+	OpenGeneralTomb : set of Tomb
+	OpenSpecialTomb : set of Tomb
+	ClosedGeneralTomb : set of Tomb
+	ClosedSpecialTomb : set of Tomb
+	inv mk_VotK (-, RTG, ATG, UATG, -, -, OGT, OST, -, -) == 
+	(
+	ATG subset RTG 
+	and UATG subset RTG
+	and card OGT>=3
+	and card OST>=1
+	)
+	init initSystem == initSystem = mk_VotK(waitingTourGroups,registerdTourGuides,availableTourGuides,unavailableTourGuides,visitorGroups,tourGroups,openGeneralTomb,openSpecialTomb,closedGeneralTomb,closedSpecialTomb)
+end
+functions
+	OpenedTomb:(Tomb) -> bool
+	OpenedTomb(Tomb) ==
+	(
+		if (Tomb.Status = <Open>)
+			then
+				 true 
+			else
+				 false
+	)
+	pre	true
+	post true
+	;
+	CanStillAccessGeneralTomb:(TourGroup) -> bool
+	CanStillAccessGeneralTomb(TourGroup)==
+	(
+		if(card TourGroup.GeneralVisitedTombs<3)
+			then
+				 true
+			else 
+				 false		
+	)
+	pre true
+	post true
+	;
+operations
+	DivideVistorGroup: VisitorGroup ==>()
+	DivideVistorGroup(VG)== 
+	(
+		dcl Group1 : TourGroup;
+		dcl TouristSet: set of Tourist := elems VG.Tourists;
+		dcl Seperator:int := card TouristSet/2;
+		dcl SplitTourists1 : seq of Tourist := VG.Tourists(1,...,Seperator);
+		dcl SplitTourists2 : seq of Tourist := VG.Tourists(Seperator,...,len VG.Tourists);
+		dcl Group2: TourGroup;
+			if(len VG.TourGuides=2)
+				then
+				(
+					Group1:=mk_TourGroup(card TourGroups+1,<nil>,<nil>,VG.TourGuides(1),elems SplitTourists1,{},{});
+					Group2:=mk_TourGroup(card TourGroups+2,<nil>,<nil>,VG.TourGuides(2),elems SplitTourists2,{},{});
+					TourGroups:=TourGroups union {Group1,Group2};
+				)
+				elseif(len VG.TourGuides=1)
+					then
+					(
+						Group1:=mk_TourGroup(card TourGroups+1,<nil>,<nil>,VG.TourGuides(1),elems SplitTourists1,{},{});
+						Group2:=mk_TourGroup(card TourGroups+2,<nil>,<nil>,<nil>,elems SplitTourists2,{},{});
+						TourGroups:=TourGroups union {Group1};
+						WaitingTourGroups:=WaitingTourGroups ^ [Group2];
+					)
+					else
+					(
+						Group1:=mk_TourGroup(card TourGroups+1,<nil>,<nil>,<nil>,elems SplitTourists1,{},{});
+						Group2:=mk_TourGroup(card TourGroups+2,<nil>,<nil>,<nil>,elems SplitTourists2,{},{});
+						WaitingTourGroups:=WaitingTourGroups ^ [Group1,Group2];
+					)
+	)
+	pre true
+	post card TourGroups=card TourGroups+2
+	and elems VG.TourGuides subset registerdTourGuides
+	or  card TourGroups=card TourGroups+1
+	and card elems WaitingTourGroups=card elems WaitingTourGroups+1
+	or card elems WaitingTourGroups=card elems WaitingTourGroups+2
+	;
+	ChangeVisitorGroup: (VisitorGroup) ==> ()
+	ChangeVisitorGroup (VG) == 
+	(
+		dcl TouristSet: set of Tourist := elems VG.Tourists;
+		dcl TouristCount :int := card TouristSet;
+			if (TouristCount >10)
+				then 
+					(
+						DivideVistorGroup(VG)
+					)
+				else
+						TourGroups:=TourGroups union {mk_TourGroup(card TourGroups+1,<nil>,<nil>,<nil>,TouristSet,{},{})};
+	)
+	pre VisitorGroups <> {}
+	post card TourGroups=card TourGroups~+1
+	;	
+	AssignTourGuide: (TourGroup) *(TourGuide) ==> ()
+	AssignTourGuide(TourGroup, TourGuide) == 
+	(
+		dcl tempTourGroup:TourGroup;
+		dcl tempTourGuide:TourGuide;
+		tempTourGuide:= mu(TourGuide,Available|-><Busy>);
+		tempTourGroup:= mu(TourGroup,TourGuide|->TourGuide);
+		AvailableTourGuides:=AvailableTourGuides\{TourGuide};
+		UnavailableTourGuides:=UnavailableTourGuides union {tempTourGuide};
+	)
+	pre TourGuide in set AvailableTourGuides 
+	and TourGuide not in set UnavailableTourGuides
+	and TourGroup.TourGuide =<nil> 
+	and TourGuide.Available=<Available>
+	and TourGroup not in set elems WaitingTourGroups
+	post TourGroup.TourGuide= TourGuide 
+	and TourGuide.Available=<Busy>
+	and TourGuide not in set AvailableTourGuides
+	and TourGuide in set UnavailableTourGuides
+	;
+	AssignTourGuideToWaitingGroup: (TourGuide) ==> ()
+	AssignTourGuideToWaitingGroup(TourGuide) == 
+	(
+		dcl tempTourGroup:TourGroup;
+		dcl tempTourGuide:TourGuide;
+		tempTourGuide:= mu(TourGuide,Available|-><Busy>);
+		tempTourGroup:= mu(hd WaitingTourGroups,TourGuide|->TourGuide);
+		AvailableTourGuides:=AvailableTourGuides\{TourGuide};
+		UnavailableTourGuides:=UnavailableTourGuides union {tempTourGuide};
+		WaitingTourGroups:=tl WaitingTourGroups;
+	)
+	pre TourGuide in set AvailableTourGuides 
+	and TourGuide not in set UnavailableTourGuides
+	and WaitingTourGroups<> [] 
+	and TourGuide.Available=<Available>
+	post (hd WaitingTourGroups).TourGuide= TourGuide 
+	and TourGuide.Available=<Busy>
+	and TourGuide not in set AvailableTourGuides
+	and TourGuide in set UnavailableTourGuides
+	and WaitingTourGroups=tl WaitingTourGroups
+	;
+	EnterTomb:(TourGroup) * (Tomb) ==>()
+	EnterTomb(TourGroup,Tomb) ==
+    (
+        if OpenedTomb(Tomb) = true
+            then 
+				if TourGroup.Access = <General>
+                	then
+						 if CanStillAccessGeneralTomb(TourGroup) = true
+                    		then
+								 if CanAccessTomb(TourGroup, Tomb) = true
+                        			then 
+									(
+										dcl tempTomb:Tomb;
+										dcl tempTourGroup:TourGroup;
+										if(TourGroup.TourGuide<><nil>)
+											then
+												(
+													tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {TourGroup}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {TourGroup},
+													WaitingTourGuides|->Tomb.WaitingTourGuides union {TourGroup.TourGuide},CurrentHumidity|->Tomb.CurrentHumidity+1);
+												)
+											else
+												(
+													tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {TourGroup}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {TourGroup},CurrentHumidity|->Tomb.CurrentHumidity+1);
+												);
+										tempTourGroup:=mu(TourGroup,GeneralVisitedTombs|->TourGroup.GeneralVisitedTombs union {Tomb});
+										OpenGeneralTomb:=OpenGeneralTomb\{Tomb};
+										OpenGeneralTomb:=OpenGeneralTomb union {tempTomb};
+										TourGroups:=TourGroups\{TourGroup};
+										TourGroups:=TourGroups union {tempTourGroup};
+									)
+                        			else
+									( 
+										dcl tempTomb:Tomb;
+										tempTomb:= mu(Tomb, Waitingtourgroup |-> Tomb.Waitingtourgroup ^ [TourGroup]);
+										OpenGeneralTomb:=OpenGeneralTomb\{Tomb};
+										OpenGeneralTomb:=OpenGeneralTomb union {tempTomb};
+									)
+            		else 
+						if CanStillAccessSpecialTomb(TourGroup) = true
+                			then
+								if CanAccessTomb(TourGroup, Tomb) = true
+                    				then 
+									(
+										dcl tempTomb:Tomb;
+										dcl tempTourGroup:TourGroup;
+										if(TourGroup.TourGuide<><nil>)
+											then
+												(
+													tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {TourGroup}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {TourGroup},WaitingTourGuides|->Tomb.WaitingTourGuides union {TourGroup.TourGuide},CurrentHumidity|->Tomb.CurrentHumidity+1);
+												)
+											else
+												(
+													tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {TourGroup}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {TourGroup},CurrentHumidity|->Tomb.CurrentHumidity+1);
+												);
+										tempTourGroup:=mu(TourGroup,SpecialVisitedTombs|->TourGroup.SpecialVisitedTombs union {Tomb});
+										OpenSpecialTomb:=OpenSpecialTomb\{Tomb};
+										OpenSpecialTomb:=OpenSpecialTomb union {tempTomb};
+										TourGroups:=TourGroups\{TourGroup};
+										TourGroups:=TourGroups union {tempTourGroup};
+									)
+                        			else
+									(
+										dcl tempTomb:Tomb;
+										tempTomb:= mu(Tomb, Waitingtourgroup |-> Tomb.Waitingtourgroup ^ [TourGroup]);
+										OpenSpecialTomb:=OpenSpecialTomb\{Tomb};
+										OpenSpecialTomb:=OpenSpecialTomb union {tempTomb};
+									)
+    )
+    pre TourGroup.Access <> <nil> 
+	and TourGroup.Ticket <> <nil> 
+	and TourGroup not in set elems Tomb.Waitingtourgroup
+    post TourGroup in set elems Tomb.Waitingtourgroup 
+	or TourGroup in set Tomb.TourGroupInTomb 
+	and TourGroup in set Tomb.TotalTourGroup 
+	and TourGroup.TourGuide in set Tomb.WaitingTourGuides
+	and Tomb in set TourGroup.GeneralVisitedTombs 
+	and Tomb.CurrentHumidity=Tomb.CurrentHumidity+1
+	or Tomb in set TourGroup.SpecialVisitedTombs 
+	and TourGroup in set Tomb.TourGroupInTomb 
+	and TourGroup in set Tomb.TotalTourGroup 
+	and TourGroup.TourGuide in set Tomb.WaitingTourGuides
+	and Tomb.CurrentHumidity=Tomb.CurrentHumidity+1
+	;
+	RemoveFromWaitingTomb: (Tomb) ==>()
+	RemoveFromWaitingTomb(Tomb) ==
+    (
+		dcl tempTourGroupTomb:TourGroup;
+		tempTourGroupTomb:=hd Tomb.Waitingtourgroup;
+		if CanAccessTomb(tempTourGroupTomb, Tomb) = true
+        	then( 
+				if(Tomb.Type=<General>)
+					then
+					(
+						dcl tempTomb:Tomb;
+							if(tempTourGroupTomb.TourGuide<><nil>)
+								then
+								(
+									tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {tempTourGroupTomb}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {tempTourGroupTomb},
+									WaitingTourGuides|->Tomb.WaitingTourGuides union {tempTourGroupTomb.TourGuide},CurrentHumidity|->Tomb.CurrentHumidity+1, Waitingtourgroup |-> tl Tomb.Waitingtourgroup,CurrentCapacity|->Tomb.CurrentCapacity+card tempTourGroupTomb.Tourists);
+								)
+								else
+								(
+									tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {tempTourGroupTomb}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {tempTourGroupTomb},CurrentHumidity|->Tomb.CurrentHumidity+1, Waitingtourgroup |-> tl Tomb.Waitingtourgroup,CurrentCapacity|->Tomb.CurrentCapacity+card tempTourGroupTomb.Tourists);
+								);
+							OpenGeneralTomb:=OpenGeneralTomb\{Tomb};
+							OpenGeneralTomb:=OpenGeneralTomb union {tempTomb};
+					)
+					else
+					(
+						dcl tempTomb:Tomb;
+								if(tempTourGroupTomb.TourGuide<><nil>)
+								then
+								(
+									tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {tempTourGroupTomb}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {tempTourGroupTomb},
+									WaitingTourGuides|->Tomb.WaitingTourGuides union {tempTourGroupTomb.TourGuide},CurrentHumidity|->Tomb.CurrentHumidity+1, Waitingtourgroup |-> tl Tomb.Waitingtourgroup,CurrentCapacity|->Tomb.CurrentCapacity+card tempTourGroupTomb.Tourists);
+								)
+								else
+								(
+									tempTomb:= mu(Tomb, TotalTourGroup |-> Tomb.TotalTourGroup union {tempTourGroupTomb}, TourGroupInTomb |-> Tomb.TourGroupInTomb union {tempTourGroupTomb},CurrentHumidity|->Tomb.CurrentHumidity+1, Waitingtourgroup |-> tl Tomb.Waitingtourgroup,CurrentCapacity|->Tomb.CurrentCapacity+card tempTourGroupTomb.Tourists);
+								);						OpenSpecialTomb:=OpenSpecialTomb\{Tomb};
+						OpenSpecialTomb:=OpenSpecialTomb union {tempTomb};
+					)
+				)
+	)
+    pre Tomb.Waitingtourgroup <> [] 
+	and Tomb.Status = <Open>
+    post hd Tomb.Waitingtourgroup not in set elems Tomb.Waitingtourgroup 
+	and hd Tomb.Waitingtourgroup in set Tomb.TourGroupInTomb
+	and Tomb.CurrentHumidity =Tomb.CurrentHumidity+1
+	;
+	SellTicket : TourGroup * TicketType ==> (TourGroup)
+	SellTicket(TG, TicketType) ==
+	(
+		dcl tourists:set of Tourist;
+		for all Tourist in set TG.Tourists do
+			(
+
+		 		tourists:=tourists union {mu(Tourist,Paid|->true)}
+			);
+		if TicketType = <Special>
+		then( 
+		return mu(TG, Ticket |-> <Special>, Access |-> <Special>,Tourists|->tourists)
+		)
+		elseif TicketType = <General>
+		then return mu(TG, Ticket |-> <General>, Access |-> <General>,Tourists|->tourists)
+		else return mu(TG, Ticket |-> <General_with_Camera>, Access |-> <General>,Tourists|->tourists)
+	)
+	pre TG in set TourGroups 
+	and TG.Ticket = <nil>
+	post TG.Ticket = TicketType 
+	and TG.Access = <General> 
+	or TG.Ticket = TicketType 
+	and TG.Access = <Special>
+	;
+	UnassignTourGuide:(TourGroup)==>()
+	UnassignTourGuide(TourGroup)==
+	(
+		dcl tempTourGuide:TourGuide;
+		dcl tempTourGroup:TourGroup;
+		tempTourGuide:= mu(TourGroup.TourGuide, Available |-> <Available>);
+		AvailableTourGuides:=AvailableTourGuides union {tempTourGuide};
+		UnavailableTourGuides:=UnavailableTourGuides\{TourGroup.TourGuide};
+		tempTourGroup:= mu(TourGroup, TourGuide |-> <nil>);
+		TourGroups:=TourGroups\{TourGroup};
+		TourGroups:=TourGroups\{tempTourGroup};
+	)
+	pre TourGroup.TourGuide <> <nil>
+	post TourGroup.TourGuide =<nil> 
+	and TourGroup.TourGuide in set AvailableTourGuides 
+	and TourGroup.TourGuide not in set UnavailableTourGuides
+	;
+	GetWaitingTourGroups: () ==> seq of TourGroup
+	GetWaitingTourGroups() ==
+	(
+		return WaitingTourGroups
+	)
+	pre WaitingTourGroups <> []
+	post RESULT = WaitingTourGroups
+	;
+	ExitTomb:(TourGroup) * (Tomb) ==>(Tomb)
+	ExitTomb(TourGroup,Tomb) ==
+	(
+		if(TourGroup.TourGuide<><nil>)
+			then
+				(
+					return mu(Tomb,TourGroupInTomb|-> Tomb.TourGroupInTomb\{TourGroup},WaitingTourGuides|->Tomb.WaitingTourGuides\{TourGroup.TourGuide});		
+				)
+			else
+				(
+					return mu(Tomb,TourGroupInTomb|-> Tomb.TourGroupInTomb\{TourGroup});		
+				);
+	)
+	pre	TourGroup in set Tomb.TourGroupInTomb
+	post TourGroup not in set Tomb.TourGroupInTomb
+	;
+	GetTombCapacity: (Tomb) ==> int
+	GetTombCapacity(Tomb) ==
+	(
+		return Tomb.MaximumCapacity
+	)
+	pre true
+	post RESULT = Tomb.MaximumCapacity
+	;
+	GetCurrentTombCapacity: (Tomb) ==> int
+	GetCurrentTombCapacity(Tomb) ==
+	(
+		return Tomb.CurrentCapacity
+	)
+	pre true
+	post RESULT = Tomb.CurrentCapacity
+	;
+
+	GenerateTombReport: (Tomb) ==>  int
+	GenerateTombReport(Tomb) ==
+	(
+		dcl Counter: int:=0;
+			for all Group in set Tomb.TotalTourGroup do
+			(
+		 		Counter:= Counter+ card Group.Tourists
+			);
+		return Counter
+	)
+	pre true
+	post true
+	;
+	AddVisitorGroup : VisitorGroup ==> ()
+	AddVisitorGroup(VisitorGroup) ==
+	(
+		VisitorGroups := VisitorGroups union {VisitorGroup};
+	)
+	pre	VisitorGroup not in set VisitorGroups 
+	post VisitorGroup in set VisitorGroups 
+	;
+	RegisterTourGuide : TourGuide ==> ()
+	RegisterTourGuide(NewTourGuide) ==
+	(
+		RegisterdTourGuides := RegisterdTourGuides union {NewTourGuide};
+		AvailableTourGuides:=AvailableTourGuides union {NewTourGuide}
+	)
+	pre	NewTourGuide not in set RegisterdTourGuides 
+	and NewTourGuide not in set AvailableTourGuides
+	post NewTourGuide in set RegisterdTourGuides 
+	and NewTourGuide in set AvailableTourGuides
+	;
+	isRegistered:(TourGuide)==> bool
+	isRegistered(TourGuide)==
+	(
+		if (TourGuide in set RegisterdTourGuides)
+			then
+				return true 
+			else
+				return false  
+	)
+	pre true 
+	post true
+	;
+	isAvailable:(TourGuide)==> bool
+	isAvailable(TourGuide)==
+	(
+		if (TourGuide in set AvailableTourGuides)
+			then
+				return true 
+			else		
+				return false
+	)
+	pre true 
+	post true
+	;
+	WaitForTourGuide:TourGroup ==> ()
+	WaitForTourGuide(TourGroup) ==
+	(
+		WaitingTourGroups := WaitingTourGroups ^ [TourGroup]
+	)
+	pre	TourGroup not in set elems WaitingTourGroups
+	post TourGroup in set elems WaitingTourGroups
+	;
+	InspectTomb:(Tomb) ==> (Tomb)
+    InspectTomb(Tomb) ==
+	(
+		if(Tomb.CurrentHumidity=Tomb.MaximumHumidity)
+		then (
+			return mu (Tomb,Status|-> <Humidity>)
+		)
+		elseif(Tomb.Maintenance =true)
+		then (
+					return mu (Tomb,Status|-> <Maintenance>)	
+		)
+    	elseif (Tomb.Status = <Closed>)
+        then
+		(    
+			return mu (Tomb,Status|-> <Open>,CurrentHumidity|-> 0,Maintenance|->false)
+		)
+		elseif (Tomb.Status = <Humidity>)
+        then
+		(    
+			return mu (Tomb,Status|-> <Open>,CurrentHumidity|-> 0,Maintenance|->false)
+		)
+		elseif (Tomb.Status = <Maintenance>)
+        then
+		(    
+			return mu (Tomb,Status|-> <Open>,CurrentHumidity|-> 0,Maintenance|->false)
+		)
+		else    
+		(
+			return mu (Tomb,Status|-> <Closed>)
+		)
+    )
+    pre Tomb in set OpenGeneralTomb or Tomb in set OpenSpecialTomb or Tomb in set ClosedGeneralTomb or Tomb in set ClosedSpecialTomb
+    post Tomb.Status = <Closed> or Tomb.Status = <Open> or Tomb.Status = <Maintenance> or Tomb.Status = <Humidity>
+    ;
+	CanStillAccessSpecialTomb:(TourGroup) ==> bool
+	CanStillAccessSpecialTomb(TourGroup)==
+	(
+		if(card TourGroup.SpecialVisitedTombs<card OpenSpecialTomb and TourGroup.Access=<Special>)
+			then
+				return true
+			else 
+				return false				
+	)
+	pre true
+	post true
+	;
+	ExitVK:(TourGroup) ==>()
+	ExitVK(TourGroup) ==
+	(
+		if(TourGroup.TourGuide<><nil>)
+		then(
+			UnassignTourGuide(TourGroup);
+			TourGroups:=TourGroups\{TourGroup};
+		)
+		else(
+			TourGroups:=TourGroups\{TourGroup};
+		)
+	)
+	pre TourGroup in set TourGroups
+	post TourGroup not in set TourGroups
+	or TourGroup not in set TourGroups
+	and TourGroup.TourGuide =<nil> 
+	and TourGroup.TourGuide in set AvailableTourGuides 
+	and TourGroup.TourGuide not in set UnavailableTourGuides
+	;
+	CanAccessTomb:(TourGroup) * (Tomb) ==> bool
+	CanAccessTomb(TourGroup,Tomb) ==
+	(
+		for all Tourist in set TourGroup.Tourists do
+		(
+				 if(Tourist.Paid=false)
+				 then (
+					 return false
+				 )
+		);
+		if (hd Tomb.Waitingtourgroup= TourGroup)
+			then
+				(
+					if(Tomb.MaximumCapacity - (Tomb.CurrentCapacity + card TourGroup.Tourists) >=0 and Tomb.MaximumHumidity - (Tomb.CurrentHumidity +1) >0)
+						then
+							(	
+								 return true
+							)
+						else
+							(	
+								return false
+							)  
+				)
+			else
+				(									
+					return false
+				)  							
+	)
+	pre	Tomb not in set TourGroup.GeneralVisitedTombs 
+	and Tomb not in set TourGroup.SpecialVisitedTombs
+	post true
+	;	
